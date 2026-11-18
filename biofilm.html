@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biofilm Coverage Analyzer — SYTO 9, OYP &amp; Morphotypes (% Area + SD)</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#151b24; --panel2:#1b2330; --line:#2a3442;
+    --ink:#e6edf3; --dim:#8b98a9; --accent:#4ea1f7; --ok:#3fb950;
+    --syto:#34d399; --oyp:#fb923c; --rod:#22d3ee; --cocci:#fbbf24; --clust:#e879f9;
+    --warn:#d29922; --err:#f85149; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:12px 20px;flex-wrap:wrap;
+         border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:10}
+  header h1{font-size:16px;margin:0;font-weight:650}
+  header .sub{color:var(--dim);font-size:12px}
+  header .right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  a.nav{color:var(--ink);text-decoration:none;font-size:12px;padding:5px 10px;
+        border:1px solid var(--line);border-radius:6px;background:var(--panel2)}
+  a.nav:hover{border-color:var(--accent)}
+  main{display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px;padding:16px 20px;max-width:1620px;margin:0 auto}
+  @media(max-width:1020px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:14px}
+  .card>h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);
+           margin:0;padding:10px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+  .card .body{padding:12px 14px}
+  button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;
+         padding:6px 12px;font-size:12.5px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#04121f;font-weight:650}
+  button.primary:disabled{opacity:.45;cursor:not-allowed}
+  button.tiny{padding:2px 7px;font-size:11px;border-radius:5px}
+  button.tab{border-radius:6px;padding:4px 10px;font-size:12px}
+  button.tab.active{background:var(--accent);border-color:var(--accent);color:#04121f;font-weight:650}
+  input,select{background:#0b1017;color:var(--ink);border:1px solid var(--line);
+               border-radius:6px;padding:6px 8px;font-size:12.5px;width:100%}
+  input[type=range]{padding:0;accent-color:var(--accent);width:100%}
+  label{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--dim);
+        margin:9px 0 3px;text-transform:uppercase;letter-spacing:.5px}
+  label .val{font-family:var(--mono);color:var(--ink);text-transform:none;font-size:11.5px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .chip{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:600;
+        border:1px solid var(--line);color:var(--dim)}
+  .chip.info{color:var(--accent);border-color:#274a6d;background:#10202f}
+  .drop-hint{border:1.5px dashed var(--line);border-radius:8px;padding:8px;margin-top:8px;
+             color:var(--dim);font-size:11.5px;text-align:center;transition:.15s}
+  .drop-hint.over{border-color:var(--accent);color:var(--accent);background:#10202f}
+  .imglist{list-style:none;margin:10px 0 0;padding:0;max-height:220px;overflow-y:auto}
+  .imglist li{display:flex;align-items:center;gap:6px;padding:5px 7px;border:1px solid var(--line);
+              border-radius:7px;margin-bottom:5px;background:var(--panel2);font-size:12px;cursor:pointer}
+  .imglist li.sel{border-color:var(--accent);background:#132336}
+  .imglist li .nm{font-family:var(--mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .imglist li input.grp{width:90px;padding:2px 5px;font-size:11px}
+  .checkrow{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;color:var(--ink);cursor:pointer;text-transform:none;letter-spacing:0}
+  .checkrow input{width:auto}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px;margin-bottom:14px}
+  .stat-card{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px 14px}
+  .stat-card .gname{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;display:flex;justify-content:space-between;align-items:center}
+  .stat-card .big{font-size:22px;font-weight:700;font-family:var(--mono);margin:4px 0;color:var(--ink);
+                  font-variant-numeric:tabular-nums}
+  .stat-card .chanline{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;margin-top:4px;padding-top:4px;border-top:1px solid #253041;gap:8px}
+  .stat-card .substats{font-size:11.5px;color:var(--dim);font-family:var(--mono);margin-top:6px}
+  .preview-wrap{background:#090d13;border:1px solid var(--line);border-radius:8px;overflow:hidden;
+                display:flex;align-items:center;justify-content:center;min-height:300px}
+  .preview-wrap img{max-width:100%;max-height:560px;display:block}
+  .hist-bars{display:flex;align-items:flex-end;gap:2px;height:40px;margin-top:10px;
+             padding:4px 6px;background:#0b1017;border:1px solid var(--line);border-radius:6px}
+  .hist-bars div{flex:1;background:var(--accent);opacity:.75;border-radius:2px 2px 0 0;min-height:1px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);font-weight:600}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  tr.clickable{cursor:pointer}
+  tr.clickable:hover{background:var(--panel2)}
+  tr.clickable.sel{background:#132336}
+  .hidden{display:none}
+  .kv{font-size:12px;color:var(--dim)}
+  #toasts{position:fixed;right:16px;bottom:16px;z-index:50;display:flex;flex-direction:column;gap:8px}
+  .toast{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--ok);
+         border-radius:8px;padding:9px 13px;font-size:12.5px;box-shadow:0 6px 24px #0008}
+  .toast.err{border-left-color:var(--err)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Biofilm Coverage Analyzer</h1>
+  <span class="sub">SYTO 9 / OYP &middot; Rods vs Coccobacilli &middot; % Area &plusmn; SD</span>
+  <div class="right">
+    <span id="statusBadge" class="chip info">ready</span>
+    <button onclick="exportCSV()">Export CSV</button>
+    <button class="primary" onclick="exportFigure()">Summary Figure (PNG + PDF)</button>
+  </div>
+</header>
+
+<main>
+  <!-- ================ LEFT CONTROLS ================ -->
+  <div>
+    <div class="card">
+      <h2>1. Batch Micrographs <span class="chip info" id="imgCount">0</span></h2>
+      <div class="body">
+        <div class="row">
+          <input type="file" id="imgPick" multiple accept=".jpg,.jpeg,.jfif,.png,.tif,.tiff,.bmp,.webp,image/*" class="hidden">
+          <button class="primary" onclick="imgPick.click()">Upload batch</button>
+          <button id="btnSamples" class="hidden" onclick="loadSamples()">Load samples</button>
+          <button class="tiny" onclick="clearAll()" style="margin-left:auto">Clear</button>
+        </div>
+        <div class="drop-hint" id="dropZone">Drag &amp; drop a batch of biofilm images here</div>
+        <div class="row" style="margin-top:8px">
+          <input id="batchGroup" placeholder="Set all to group..." style="flex:1;padding:4px 7px;font-size:11.5px">
+          <button class="tiny" style="width:auto" onclick="setAllGroup()">Apply to all</button>
+        </div>
+        <ul class="imglist" id="imgList"></ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Morphotypes (Rods vs Coccobacilli)</h2>
+      <div class="body">
+        <label class="checkrow" style="margin-top:0">
+          <input type="checkbox" id="pMorph" checked onchange="onMorphToggle()">
+          Separate Large Rods vs Small Coccobacilli
+        </label>
+        <div id="morphBox">
+          <label>Rod Min Area (px&sup2;) <span class="val" id="vRodArea">230 px&sup2;</span></label>
+          <input type="range" id="pRodArea" min="60" max="800" step="10" value="230" oninput="vRodArea.textContent=this.value+' px²'" onchange="onParamChange()">
+
+          <label>Rod Min Length (px) <span class="val" id="vRodLen">28 px</span></label>
+          <input type="range" id="pRodLen" min="12" max="80" step="2" value="28" oninput="vRodLen.textContent=this.value+' px'" onchange="onParamChange()">
+
+          <label>Dense Cluster Handling</label>
+          <select id="pClusterMode" onchange="onParamChange()">
+            <option value="separate" selected>Report Dense Clusters Separately</option>
+            <option value="cocci">Assign Clusters to Coccobacilli</option>
+            <option value="rods">Assign Clusters to Large Rods</option>
+            <option value="off">Off (Strict 2-way size split)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Channel &amp; Threshold Settings</h2>
+      <div class="body">
+        <label>Channel Mode</label>
+        <select id="pChannel" onchange="onMethodChange()">
+          <option value="auto" selected>Auto-detect (1 or 2 channels)</option>
+          <option value="dual_syto9_oyp">Both: SYTO 9 (Green) + OYP (Orange)</option>
+          <option value="green_syto9">Green only: SYTO 9</option>
+          <option value="orange_oyp">Orange only: OYP</option>
+          <option value="luminance">Grayscale Luminance</option>
+        </select>
+
+        <label class="checkrow">
+          <input type="checkbox" id="pUnmix" checked onchange="onParamChange()">
+          Spectral unmix dual images
+        </label>
+
+        <label>Auto Threshold Method</label>
+        <select id="pMethod" onchange="onMethodChange()">
+          <option value="li" selected>Li (Min Cross-Entropy &mdash; full cells)</option>
+          <option value="otsu">Otsu (brightest cells)</option>
+          <option value="isodata">IsoData (ImageJ Default)</option>
+          <option value="moments">Moments</option>
+          <option value="yen">Yen</option>
+          <option value="huang">Huang</option>
+          <option value="triangle">Triangle</option>
+          <option value="manual">Manual Cutoff</option>
+        </select>
+
+        <div id="manualBox" class="hidden">
+          <label>Manual Threshold <span class="val" id="vManual">100</span></label>
+          <input type="range" id="pManual" min="0" max="255" value="100" oninput="vManual.textContent=this.value" onchange="onParamChange()">
+        </div>
+
+        <div id="manualDualBox" class="hidden">
+          <label>Manual Green (SYTO 9) <span class="val" id="vManualG">45</span></label>
+          <input type="range" id="pManualG" min="0" max="255" value="45" oninput="vManualG.textContent=this.value" onchange="onParamChange()">
+          <label>Manual Orange (OYP) <span class="val" id="vManualO">60</span></label>
+          <input type="range" id="pManualO" min="0" max="255" value="60" oninput="vManualO.textContent=this.value" onchange="onParamChange()">
+        </div>
+
+        <div id="offsetBox">
+          <label>Threshold Offset <span class="val" id="vOffset">0</span></label>
+          <input type="range" id="pOffset" min="-60" max="60" value="0" oninput="vOffset.textContent=this.value" onchange="onParamChange()">
+        </div>
+
+        <label>Rolling-Ball Background Radius <span class="val" id="vBg">35 px</span></label>
+        <input type="range" id="pBg" min="0" max="120" step="5" value="35" oninput="vBg.textContent=this.value==0?'Off':this.value+' px'" onchange="onParamChange()">
+
+        <label>Min Particle Area (px) <span class="val" id="vMinArea">15 px</span></label>
+        <input type="range" id="pMinArea" min="0" max="200" step="5" value="15" oninput="vMinArea.textContent=this.value+' px'" onchange="onParamChange()">
+
+        <label>Gaussian Smooth (&sigma;) <span class="val" id="vSmooth">0.0</span></label>
+        <input type="range" id="pSmooth" min="0" max="3" step="0.5" value="0" oninput="vSmooth.textContent=parseFloat(this.value).toFixed(1)" onchange="onParamChange()">
+
+        <label class="checkrow">
+          <input type="checkbox" id="pScalebar" checked onchange="onParamChange()">
+          Exclude bottom-right scale bar corner
+        </label>
+        <div id="sbDims" class="grid2" style="margin-top:6px">
+          <div>
+            <label style="margin-top:2px">Width % <span class="val" id="vSbW">15%</span></label>
+            <input type="range" id="pSbW" min="5" max="35" value="15" oninput="vSbW.textContent=this.value+'%'" onchange="onParamChange()">
+          </div>
+          <div>
+            <label style="margin-top:2px">Height % <span class="val" id="vSbH">12%</span></label>
+            <input type="range" id="pSbH" min="5" max="35" value="12" oninput="vSbH.textContent=this.value+'%'" onchange="onParamChange()">
+          </div>
+        </div>
+
+        <label class="checkrow">
+          <input type="checkbox" id="pFillHoles" onchange="onParamChange()">
+          Fill internal holes
+        </label>
+        <label class="checkrow">
+          <input type="checkbox" id="pInvert" onchange="onParamChange()">
+          Invert (brightfield dark-on-light)
+        </label>
+
+        <div class="row" style="margin-top:12px">
+          <button class="primary" style="flex:1" onclick="runAnalyze()">Re-analyze Batch</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================ RIGHT RESULTS ================ -->
+  <div>
+    <div id="summaryGrid" class="summary-grid"></div>
+
+    <div class="card">
+      <h2>
+        Visual Verification
+        <span class="chip info" id="activeTitle">No image selected</span>
+        <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="tab active" data-view="morphotype" onclick="setView('morphotype')">Morphotypes</button>
+          <button class="tab" data-view="overlay" onclick="setView('overlay')">Channels</button>
+          <button class="tab" data-view="mask" onclick="setView('mask')">Binary Mask</button>
+          <button class="tab" data-view="original" onclick="setView('original')">Original</button>
+        </span>
+      </h2>
+      <div class="body">
+        <div class="preview-wrap" id="previewWrap">
+          <span class="kv">Upload biofilm images (or load samples) to inspect segmentation overlay.</span>
+        </div>
+        <div class="row" style="margin-top:10px;justify-content:space-between">
+          <div class="kv" id="activeMetrics">&mdash;</div>
+          <div class="kv" id="legendHint">
+            <span style="color:var(--rod)">Cyan = Large Rods</span> &middot;
+            <span style="color:var(--cocci)">Gold = Coccobacilli</span> &middot;
+            <span style="color:var(--clust)">Magenta = Clusters</span>
+          </div>
+        </div>
+        <div class="hist-bars" id="histBars" title="Intensity histogram (0-255)"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Per-Image Measurements <span class="chip info" id="rowCount">0</span></h2>
+      <div class="body" style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Image</th>
+              <th>Group</th>
+              <th>Mode</th>
+              <th class="num" style="color:var(--syto)">Green (SYTO 9)</th>
+              <th class="num" style="color:var(--oyp)">Orange (OYP)</th>
+              <th class="num" style="color:var(--rod)">Large Rods</th>
+              <th class="num" style="color:var(--cocci)">Coccobacilli</th>
+              <th class="num" style="color:var(--clust)">Clusters</th>
+              <th class="num">Total %</th>
+            </tr>
+          </thead>
+          <tbody id="tblBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card hidden" id="figCard">
+      <h2>Exported Summary Figure (300 DPI PNG + Vector PDF)
+        <span style="margin-left:auto;display:flex;gap:8px" id="figLinks"></span>
+      </h2>
+      <div class="body" style="text-align:center">
+        <img id="figImg" style="max-width:680px;width:100%;border-radius:8px;background:#fff;border:1px solid var(--line)">
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toasts"></div>
+
+<script>
+let IMAGES = [];
+let LAST_BATCH = null;
+let ACTIVE_NAME = null;
+let VIEW_MODE = 'morphotype';
+let ANALYZE_TIMER = null;
+
+function toast(msg, kind='ok'){
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(), 3500);
+}
+
+async function api(url, opts={}){
+  const r = await fetch(url, opts);
+  const ct = r.headers.get('Content-Type') || '';
+  if(!r.ok){
+    let msg = r.statusText;
+    if(ct.includes('json')){ const j = await r.json(); msg = j.error || msg; }
+    throw new Error(msg);
+  }
+  return ct.includes('json') ? r.json() : r;
+}
+
+function getParams(){
+  return {
+    channel: document.getElementById('pChannel').value,
+    unmix_dual: document.getElementById('pUnmix').checked,
+    separate_morphotypes: document.getElementById('pMorph').checked,
+    rod_min_area_px: parseInt(document.getElementById('pRodArea').value, 10),
+    rod_min_length_px: parseFloat(document.getElementById('pRodLen').value),
+    cluster_mode: document.getElementById('pClusterMode').value,
+    method: document.getElementById('pMethod').value,
+    manual_threshold: parseInt(document.getElementById('pManual').value, 10),
+    manual_threshold_green: parseInt(document.getElementById('pManualG').value, 10),
+    manual_threshold_orange: parseInt(document.getElementById('pManualO').value, 10),
+    threshold_offset: parseInt(document.getElementById('pOffset').value, 10),
+    bg_radius: parseInt(document.getElementById('pBg').value, 10),
+    min_particle_px: parseInt(document.getElementById('pMinArea').value, 10),
+    smooth_sigma: parseFloat(document.getElementById('pSmooth').value),
+    exclude_scalebar: document.getElementById('pScalebar').checked,
+    scalebar_w_pct: parseFloat(document.getElementById('pSbW').value),
+    scalebar_h_pct: parseFloat(document.getElementById('pSbH').value),
+    fill_holes: document.getElementById('pFillHoles').checked,
+    invert: document.getElementById('pInvert').checked,
+    view: VIEW_MODE,
+    preview_name: ACTIVE_NAME,
+  };
+}
+
+function onMorphToggle(){
+  const on = document.getElementById('pMorph').checked;
+  document.getElementById('morphBox').classList.toggle('hidden', !on);
+  onParamChange();
+}
+
+function onMethodChange(){
+  const m = document.getElementById('pMethod').value;
+  const ch = document.getElementById('pChannel').value;
+  const isManual = (m === 'manual');
+  const isDual = (ch === 'dual_syto9_oyp');
+  document.getElementById('manualBox').classList.toggle('hidden', !isManual || isDual);
+  document.getElementById('manualDualBox').classList.toggle('hidden', !isManual || !isDual);
+  document.getElementById('offsetBox').classList.toggle('hidden', isManual);
+  onParamChange();
+}
+
+function onParamChange(){
+  document.getElementById('sbDims').classList.toggle('hidden', !document.getElementById('pScalebar').checked);
+  clearTimeout(ANALYZE_TIMER);
+  ANALYZE_TIMER = setTimeout(runAnalyze, 140);
+}
+
+function setView(v){
+  VIEW_MODE = v;
+  document.querySelectorAll('button.tab').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+  runAnalyze();
+}
+
+async function refreshState(autoRun=true){
+  const st = await api('/api/biofilm/state');
+  IMAGES = st.images || [];
+  document.getElementById('imgCount').textContent = IMAGES.length;
+  document.getElementById('btnSamples').classList.toggle('hidden', !st.has_session_samples);
+  if(IMAGES.length && (!ACTIVE_NAME || !IMAGES.some(x=>x.name===ACTIVE_NAME))){
+    ACTIVE_NAME = IMAGES[0].name;
+  }
+  renderImageList();
+  if(autoRun && IMAGES.length) await runAnalyze();
+  else if(!IMAGES.length) renderEmpty();
+}
+
+function renderEmpty(){
+  LAST_BATCH = null;
+  document.getElementById('summaryGrid').innerHTML = '';
+  document.getElementById('tblBody').innerHTML = '';
+  document.getElementById('rowCount').textContent = '0';
+  document.getElementById('activeTitle').textContent = 'No image selected';
+  document.getElementById('activeMetrics').textContent = '—';
+  document.getElementById('histBars').innerHTML = '';
+  document.getElementById('previewWrap').innerHTML = '<span class="kv">Upload biofilm images (or load samples) to inspect segmentation overlay.</span>';
+}
+
+function renderImageList(){
+  const ul = document.getElementById('imgList');
+  ul.innerHTML = '';
+  for(const im of IMAGES){
+    const li = document.createElement('li');
+    if(im.name === ACTIVE_NAME) li.classList.add('sel');
+    li.onclick = (e)=>{
+      if(e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+      ACTIVE_NAME = im.name;
+      renderImageList();
+      runAnalyze();
+    };
+    const nm = document.createElement('span');
+    nm.className = 'nm';
+    nm.title = im.name;
+    nm.textContent = im.name;
+
+    const grp = document.createElement('input');
+    grp.className = 'grp';
+    grp.value = im.group;
+    grp.title = 'Group name';
+    grp.onchange = async ()=>{
+      await api('/api/biofilm/groups', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({groups:{[im.name]: grp.value}})
+      });
+      await refreshState(true);
+    };
+
+    const del = document.createElement('button');
+    del.className = 'tiny';
+    del.style.width = 'auto';
+    del.textContent = 'x';
+    del.title = 'Remove image';
+    del.onclick = async ()=>{
+      await api('/api/biofilm/delete', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({name: im.name})
+      });
+      await refreshState(true);
+    };
+    li.append(nm, grp, del);
+    ul.appendChild(li);
+  }
+}
+
+async function setAllGroup(){
+  const g = document.getElementById('batchGroup').value.trim();
+  if(!g || !IMAGES.length) return;
+  const mapping = {};
+  for(const im of IMAGES) mapping[im.name] = g;
+  await api('/api/biofilm/groups', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({groups: mapping})
+  });
+  await refreshState(true);
+}
+
+async function runAnalyze(){
+  if(!IMAGES.length){ renderEmpty(); return; }
+  const badge = document.getElementById('statusBadge');
+  badge.textContent = 'analyzing...';
+  try{
+    const batch = await api('/api/biofilm/analyze', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(getParams())
+    });
+    LAST_BATCH = batch;
+    renderBatch(batch);
+    badge.textContent = 'ready';
+  }catch(err){
+    badge.textContent = 'error';
+    toast(err.message, 'err');
+  }
+}
+
+function fmtMode(m){
+  return ({
+    dual_syto9_oyp: 'SYTO 9 + OYP',
+    green_syto9: 'SYTO 9 (Green)',
+    orange_oyp: 'OYP (Orange)',
+    luminance: 'Grayscale',
+  })[m] || m;
+}
+
+function pctCell(v){
+  return (v !== null && v !== undefined) ? v.toFixed(2) + '%' : '&mdash;';
+}
+
+function renderBatch(batch){
+  const sg = document.getElementById('summaryGrid');
+  sg.innerHTML = '';
+  for(const g of (batch.groups || [])){
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    let headline = g.formatted;
+    let headlineLabel = 'Total Coverage';
+    const lines = [];
+
+    if(g.has_both_channels){
+      lines.push(`<div class="chanline"><span style="color:var(--syto)">Green (SYTO 9)</span><span>${esc(g.green_syto9_summary.formatted)}</span></div>`);
+      if(g.green_rods_summary && g.green_cocci_summary){
+        lines.push(`<div class="chanline" style="border-top:none;padding-top:0;font-size:11px;color:var(--dim)"><span>&nbsp;&nbsp;Rods: ${esc(g.green_rods_summary.formatted)}</span><span>Cocci: ${esc(g.green_cocci_summary.formatted)}</span></div>`);
+      }
+      lines.push(`<div class="chanline"><span style="color:var(--oyp)">Orange (OYP)</span><span>${esc(g.orange_oyp_summary.formatted)}</span></div>`);
+      if(g.orange_rods_summary && g.orange_cocci_summary){
+        lines.push(`<div class="chanline" style="border-top:none;padding-top:0;font-size:11px;color:var(--dim)"><span>&nbsp;&nbsp;Rods: ${esc(g.orange_rods_summary.formatted)}</span><span>Cocci: ${esc(g.orange_cocci_summary.formatted)}</span></div>`);
+      }
+    } else if(g.green_syto9_summary && !g.orange_oyp_summary){
+      headlineLabel = 'Green (SYTO 9)';
+      headline = g.green_syto9_summary.formatted;
+    } else if(g.orange_oyp_summary && !g.green_syto9_summary){
+      headlineLabel = 'Orange (OYP)';
+      headline = g.orange_oyp_summary.formatted;
+    }
+
+    if(g.has_morphotypes){
+      lines.push(`<div class="chanline"><span style="color:var(--rod)">Large Rods</span><span>${esc(g.rods_summary.formatted)}</span></div>`);
+      lines.push(`<div class="chanline"><span style="color:var(--cocci)">Small Coccobacilli</span><span>${esc(g.cocci_summary.formatted)}</span></div>`);
+      if(g.clusters_summary && g.clusters_summary.mean_pct > 0){
+        lines.push(`<div class="chanline"><span style="color:var(--clust)">Dense Clusters</span><span>${esc(g.clusters_summary.formatted)}</span></div>`);
+      }
+    }
+
+    card.innerHTML = `
+      <div class="gname"><span>${esc(g.group)} &middot; ${headlineLabel} (n=${g.n})</span>
+        <button class="tiny" style="width:auto" onclick="copyText('${esc(headline)}')">Copy</button></div>
+      <div class="big">${esc(headline)}</div>
+      ${lines.join('')}
+      <div class="substats">SEM ${g.sem_pct.toFixed(2)}% &middot; Med ${g.median_pct.toFixed(2)}% &middot; Range ${g.min_pct.toFixed(1)}&ndash;${g.max_pct.toFixed(1)}%</div>
+    `;
+    sg.appendChild(card);
+  }
+
+  const rows = batch.images || [];
+  document.getElementById('rowCount').textContent = rows.length;
+  const tb = document.getElementById('tblBody');
+  tb.innerHTML = '';
+  let activeRow = null;
+  for(const r of rows){
+    if(r.name === ACTIVE_NAME) activeRow = r;
+    const tr = document.createElement('tr');
+    tr.className = 'clickable' + (r.name === ACTIVE_NAME ? ' sel' : '');
+    tr.onclick = ()=>{
+      ACTIVE_NAME = r.name;
+      renderImageList();
+      runAnalyze();
+    };
+    tr.innerHTML = `
+      <td style="font-family:var(--mono)">${esc(r.name)}</td>
+      <td>${esc(r.group)}</td>
+      <td>${esc(fmtMode(r.channel_used))}</td>
+      <td class="num" style="color:var(--syto)">${pctCell(r.green_syto9_pct)}</td>
+      <td class="num" style="color:var(--oyp)">${pctCell(r.orange_oyp_pct)}</td>
+      <td class="num" style="color:var(--rod)">${pctCell(r.rods_pct)}</td>
+      <td class="num" style="color:var(--cocci)">${pctCell(r.cocci_pct)}</td>
+      <td class="num" style="color:var(--clust)">${pctCell(r.clusters_pct)}</td>
+      <td class="num"><b>${r.coverage_pct.toFixed(2)}%</b></td>
+    `;
+    tb.appendChild(tr);
+  }
+
+  if(!activeRow && rows.length) activeRow = rows[0];
+  if(activeRow){
+    document.getElementById('activeTitle').textContent = `${activeRow.name} — ${activeRow.coverage_pct.toFixed(2)}%`;
+    const tStr = Object.entries(activeRow.thresholds || {}).map(([k,v])=>`${k}=${v}`).join(' · ');
+    const parts = [`${fmtMode(activeRow.channel_used)}`, `${activeRow.method} (${tStr})`];
+    if(activeRow.rods_pct !== null && activeRow.rods_pct !== undefined){
+      parts.push(`Rods: ${activeRow.rods_pct.toFixed(2)}% (n=${activeRow.n_rods})`);
+      parts.push(`Cocci: ${activeRow.cocci_pct.toFixed(2)}% (n=${activeRow.n_cocci})`);
+      if(activeRow.clusters_pct > 0) parts.push(`Clusters: ${activeRow.clusters_pct.toFixed(2)}%`);
+    }
+    if(activeRow.channel_used === 'dual_syto9_oyp'){
+      parts.push(`Green[R:${activeRow.green_rods_pct?.toFixed(1) ?? '—'}% C:${activeRow.green_cocci_pct?.toFixed(1) ?? '—'}%]`);
+      parts.push(`Orange[R:${activeRow.orange_rods_pct?.toFixed(1) ?? '—'}% C:${activeRow.orange_cocci_pct?.toFixed(1) ?? '—'}%]`);
+    }
+    document.getElementById('activeMetrics').textContent = parts.join(' · ');
+
+    if(activeRow.channel_used === 'dual_syto9_oyp' && VIEW_MODE === 'morphotype'){
+      document.getElementById('legendHint').innerHTML =
+        `<span style="color:#00e678">Emerald = Green Rods</span> &middot; ` +
+        `<span style="color:#a5ff5a">Lime = Green Cocci</span> &middot; ` +
+        `<span style="color:#ff6e14">Orange = OYP Rods</span> &middot; ` +
+        `<span style="color:#ffd246">Amber = OYP Cocci</span> &middot; ` +
+        `<span style="color:var(--clust)">Magenta = Clusters</span>`;
+    } else if(VIEW_MODE === 'overlay'){
+      document.getElementById('legendHint').innerHTML =
+        `<span style="color:var(--syto)">Green = SYTO 9</span> &middot; <span style="color:var(--oyp)">Orange = OYP</span> &middot; Box = excluded scale bar`;
+    } else {
+      document.getElementById('legendHint').innerHTML =
+        `<span style="color:var(--rod)">Cyan = Large Rods</span> &middot; <span style="color:var(--cocci)">Gold = Coccobacilli</span> &middot; <span style="color:var(--clust)">Magenta = Clusters</span>`;
+    }
+
+    if(activeRow.preview_b64){
+      document.getElementById('previewWrap').innerHTML =
+        `<img src="data:image/png;base64,${activeRow.preview_b64}" alt="${esc(activeRow.name)}">`;
+    }
+    const hb = document.getElementById('histBars');
+    hb.innerHTML = '';
+    const hist = activeRow.histogram_32 || [];
+    const mx = Math.max(...hist, 1);
+    for(const v of hist){
+      const d = document.createElement('div');
+      d.style.height = Math.max(2, Math.round(100 * v / mx)) + '%';
+      hb.appendChild(d);
+    }
+  }
+}
+
+async function uploadFiles(fileList){
+  const files = Array.from(fileList || []);
+  if(!files.length) return;
+  const badge = document.getElementById('statusBadge');
+  badge.textContent = 'uploading...';
+  let okCount = 0;
+  let lastUploaded = null;
+  for(const f of files){
+    try{
+      const b64 = await fileToB64(f);
+      const res = await api('/api/biofilm/upload', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({name: f.name, content_b64: b64})
+      });
+      okCount += 1;
+      if(res && res.name) lastUploaded = res.name;
+    }catch(err){
+      toast(`Failed "${f.name}": ${err.message}`, 'err');
+    }
+  }
+  badge.textContent = 'ready';
+  if(okCount > 0){
+    if(lastUploaded) ACTIVE_NAME = lastUploaded;
+    toast(`Uploaded ${okCount} image(s)`);
+    await refreshState(true);
+  }
+}
+
+function fileToB64(file){
+  return new Promise((res, rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>{
+      const s = String(r.result || '');
+      const idx = s.indexOf('base64,');
+      res(idx >= 0 ? s.slice(idx + 7) : s);
+    };
+    r.onerror = ()=>rej(new Error('could not read file'));
+    r.readAsDataURL(file);
+  });
+}
+
+async function loadSamples(){
+  const res = await api('/api/biofilm/load_samples', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
+  });
+  toast(`Loaded ${res.loaded} sample micrograph(s)`);
+  await refreshState(true);
+}
+
+async function clearAll(){
+  await api('/api/biofilm/delete', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name:'__all__'})
+  });
+  ACTIVE_NAME = null;
+  await refreshState(false);
+}
+
+async function exportCSV(){
+  if(!IMAGES.length){ toast('No images loaded', 'err'); return; }
+  const r = await fetch('/api/biofilm/export_csv', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(getParams())
+  });
+  const blob = await r.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'biofilm_coverage.csv';
+  a.click();
+}
+
+async function exportFigure(){
+  if(!IMAGES.length){ toast('No images loaded', 'err'); return; }
+  try{
+    const res = await api('/api/biofilm/export_figure', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(getParams())
+    });
+    document.getElementById('figCard').classList.remove('hidden');
+    document.getElementById('figImg').src = '/artifact/' + res.png + '?t=' + Date.now();
+    document.getElementById('figLinks').innerHTML =
+      `<a class="nav" href="/artifact/${res.png}" download>Download PNG</a>` +
+      `<a class="nav" href="/artifact/${res.pdf}" download>Download PDF</a>`;
+    toast('Summary figure exported (300 DPI PNG + PDF)');
+  }catch(err){
+    toast(err.message, 'err');
+  }
+}
+
+function copyText(t){
+  navigator.clipboard?.writeText(t);
+  toast('Copied: ' + t);
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+document.getElementById('imgPick').onchange = (e)=>{
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  uploadFiles(files);
+};
+const dz = document.getElementById('dropZone');
+['dragenter','dragover'].forEach(ev=>document.body.addEventListener(ev, e=>{
+  e.preventDefault(); dz.classList.add('over');
+}));
+['dragleave','drop'].forEach(ev=>document.body.addEventListener(ev, e=>{
+  e.preventDefault(); dz.classList.remove('over');
+}));
+document.body.addEventListener('drop', e=>{
+  if(e.dataTransfer?.files?.length) uploadFiles(e.dataTransfer.files);
+});
+
+refreshState(true);
+</script>
+</body>
+</html>
