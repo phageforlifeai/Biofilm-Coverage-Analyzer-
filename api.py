@@ -19,9 +19,9 @@ from typing import Any
 
 from PIL import Image
 
-from . import analyzer as biofilm
+import analyzer as biofilm
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent
 OUTPUT_DIR = ROOT / "output"
 BIOFILM_DIR = OUTPUT_DIR / "biofilm_uploads"
 BIOFILM_OUT = OUTPUT_DIR / "biofilm_exports"

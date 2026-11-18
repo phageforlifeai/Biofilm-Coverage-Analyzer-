@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-tests/test_biofilm.py
+test_biofilm.py
 -----------------------
 Verification suite for the ImageJ-like SYTO 9 (Green) & OYP (Orange) biofilm
 coverage analyzer (core + exports + web API).
@@ -23,10 +23,10 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-import biofilm  # noqa: E402
+import analyzer as biofilm  # noqa: E402
 
 PASS, FAIL = "  \033[32mPASS\033[0m", "  \033[31mFAIL\033[0m"
 results: list[tuple[bool, str]] = []
@@ -173,7 +173,7 @@ def test_http() -> None:
     print("\n[3] web server /biofilm & /api/biofilm/* endpoints")
     port = free_port()
     proc = subprocess.Popen(
-        [sys.executable, "-m", "biofilm.server", "--host", "127.0.0.1", "--port", str(port)],
+        [sys.executable, "server.py", "--host", "127.0.0.1", "--port", str(port)],
         cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
     )
     base = f"http://127.0.0.1:{port}"

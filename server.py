@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-biofilm/server.py
+server.py
 -----------------
 Standalone HTTP web UI & JSON API for the Biofilm Coverage Analyzer.
 """
@@ -16,11 +16,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from . import analyzer as biofilm
-from . import api as biofilm_api
+import analyzer as biofilm
+import api as biofilm_api
 
-ROOT = Path(__file__).resolve().parent.parent
-STATIC = Path(__file__).resolve().parent / "static"
+ROOT = Path(__file__).resolve().parent
+STATIC = ROOT
 MAX_BODY_BYTES = max(1, int(os.environ.get("BIOFILM_MAX_UPLOAD_MB", "25"))) * 1024 * 1024
 
 

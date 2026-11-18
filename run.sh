@@ -8,4 +8,4 @@ if [ ! -d .venv ]; then
   .venv/bin/python -m pip install -r requirements.txt
 fi
 
-exec .venv/bin/python -m biofilm.server --host 0.0.0.0 --port "${PORT:-8000}"
+exec .venv/bin/python server.py --host 0.0.0.0 --port "${PORT:-8000}"

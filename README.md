@@ -25,21 +25,22 @@ cd Biofilm-Coverage-Analyzer-
 ./run.sh
 ```
 
-Then open **http://127.0.0.1:8000/** in your browser.
-
-Or install manually in a virtual environment:
+Or install manually in a virtual environment (Linux/macOS/Windows):
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate
+# Linux/macOS: source .venv/bin/activate
+# Windows:     .venv\Scripts\activate
 pip install -r requirements.txt
-python -m biofilm.server --host 0.0.0.0 --port 8000
+python server.py --host 0.0.0.0 --port 8000
 ```
+
+Then open **http://127.0.0.1:8000/** in your browser.
 
 ## CLI Usage
 
 ```bash
-python -m biofilm path/to/images/*.jpg \
+python analyzer.py path/to/images/*.jpg \
   --group auto \
   --method li \
   --bg-radius 35 \
@@ -48,12 +49,12 @@ python -m biofilm path/to/images/*.jpg \
   --plot coverage_summary.png
 ```
 
-Run `python -m biofilm --help` for all options (`--channel`, `--method`, `--rod-min-area`, `--rod-min-length`, `--cluster-mode`, `--no-unmix`, `--no-exclude-scalebar`, etc.).
+Run `python analyzer.py --help` for all options (`--channel`, `--method`, `--rod-min-area`, `--rod-min-length`, `--cluster-mode`, `--no-unmix`, `--no-exclude-scalebar`, etc.).
 
 ## Running Tests
 
 ```bash
-python tests/test_biofilm.py
+python test_biofilm.py
 ```
 
 ## License
